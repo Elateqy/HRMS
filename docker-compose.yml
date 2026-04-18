@@ -1,0 +1,210 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: hrms-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: postgres
+    ports:
+      - "5431:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - hrms
+
+  keycloak-postgres:
+    image: postgres:16
+    container_name: keycloak-postgres
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+      POSTGRES_DB: keycloak
+    ports:
+      - "5433:5432"
+    volumes:
+      - keycloak_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U keycloak -d keycloak" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - hrms
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.6.1
+    container_name: keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KC_HOSTNAME: keycloak
+    command:
+      - start-dev
+      - --import-realm
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./hrms-realm.json:/opt/keycloak/data/import/hrms-realm.json:ro
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+    networks:
+      - hrms
+
+  configserver:
+    build: ./configserver
+    container_name: configserver
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./config:/config
+    environment:
+      SPRING_PROFILES_ACTIVE: native
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: "optional:file:/config/"
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -fsS http://localhost:8888/actuator/health | grep -q UP" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - hrms
+
+  eurekaserver:
+    build: ./EurekaServer
+    container_name: eurekaserver
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -fsS http://localhost:8761/actuator/health | grep -q UP" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    depends_on:
+      configserver:
+        condition: service_healthy
+    networks:
+      - hrms
+
+  gatewayserver:
+    build: ./gatewayserver
+    container_name: gatewayserver
+    depends_on:
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+    ports:
+      - "8087:8087"
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8761/eureka
+    networks:
+      - hrms
+
+  userservice:
+    build: ./UserService
+    container_name: userservice
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:8888
+      SPRING_APPLICATION_NAME: userservice
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8761/eureka
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+    networks:
+      - hrms
+
+  leaveservice:
+    build: ./LeaveService
+    container_name: leaveservice
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:8888
+      SPRING_APPLICATION_NAME: leaveservice
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8761/eureka
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+    networks:
+      - hrms
+
+  trainingservice:
+    build: ./TrainingService
+    container_name: trainingservice
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:8888
+      SPRING_APPLICATION_NAME: trainingservice
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8761/eureka
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+    networks:
+      - hrms
+
+  reportingservice:
+    build: ./ReportingService
+    container_name: reportingservice
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:8888
+      SPRING_APPLICATION_NAME: reportingservice
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8761/eureka
+    ports:
+      - "8085:8085"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+    networks:
+      - hrms
+
+  nginx:
+    image: nginx:latest
+    container_name: hrms-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - gatewayserver
+    networks:
+      - hrms
+
+volumes:
+  pgdata:
+  keycloak_pgdata:
+
+networks:
+  hrms:
+    driver: bridge

@@ -1,0 +1,12 @@
+package com.hrms.userservice.exception;
+
+public enum ErrorCode {
+    VALIDATION_ERROR,
+    INTERNAL_SERVER_ERROR,
+    RESOURCE_NOT_FOUND,
+    DUPLICATE_RESOURCE,
+    DUPLICATE_EMPLOYEE_EMAIL,
+    INACTIVE_EMPLOYEE,
+    MANAGER_NOT_FOUND,
+    SELF_MANAGER_ASSIGNMENT
+}

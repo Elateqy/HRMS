@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: userservice
+  config:
+    import: "optional:configserver:http://configserver:8888/"
+
+

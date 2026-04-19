@@ -1,16 +1,15 @@
-package com.hrms.userservice;
+package com.hrms.leaveservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
-import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication
 @EnableFeignClients
-@EnableScheduling
-public class UserServiceApplication {
+@SpringBootApplication
+public class LeaveServiceApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(UserServiceApplication.class, args);
+        SpringApplication.run(LeaveServiceApplication.class, args);
     }
+
 }

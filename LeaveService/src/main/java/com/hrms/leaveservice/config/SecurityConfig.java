@@ -1,4 +1,4 @@
-package com.hrms.userservice.config;
+package com.hrms.leaveservice.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,14 +28,18 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**"
+                                "/v3/api-docs/**",
+                                "/actuator/health",
+                                "/actuator/info"
                         ).permitAll()
 
-                        .requestMatchers("/users/count").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers("/leave-balances/*/default").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers("/leave-balances/**").hasAnyRole("EMPLOYEE", "MANAGER", "ADMIN")
 
-                        .requestMatchers("/users/*").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
-
-                        .requestMatchers("/users/**").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers("/leaves/*/approve", "/leaves/*/reject").hasAnyRole("MANAGER", "ADMIN")
+                        .requestMatchers("/leaves/employee/**").hasAnyRole("EMPLOYEE", "MANAGER", "ADMIN")
+                        .requestMatchers("/leaves/count/**").hasAnyRole("MANAGER", "ADMIN")
+                        .requestMatchers("/leaves/**").hasAnyRole("EMPLOYEE", "MANAGER", "ADMIN")
 
                         .anyRequest().authenticated()
                 )
@@ -67,7 +71,7 @@ public class SecurityConfig {
         }
 
         for (Object role : roles) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.toString()));
         }
 
         return authorities;

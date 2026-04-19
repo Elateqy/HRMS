@@ -4,7 +4,3 @@ spring:
   config:
     import: "optional:configserver:http://configserver:8888/"
 
-eureka:
-  client:
-    service-url:
-      defaultZone: http://eurekaserver:8761/eureka

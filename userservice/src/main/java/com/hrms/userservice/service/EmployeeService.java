@@ -27,6 +27,7 @@ public class EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final BusinessIdGeneratorService businessIdGeneratorService;
     private final LeaveClient leaveClient;
+    private final UserProvisioningService userProvisioningService;
 
     @Transactional
     public EmployeeResponse createEmployee(EmployeeRequest request) {
@@ -41,8 +42,7 @@ public class EmployeeService {
         employee.setUserType(UserType.EMPLOYEE);
 
         Employee savedEmployee = employeeRepository.save(employee);
-
-        leaveClient.createDefaultBalance(savedEmployee.getEmployeeId());
+        userProvisioningService.enqueueCreateDefaultLeaveBalance(savedEmployee.getEmployeeId());
 
         log.info("Employee created successfully with employeeId={}", savedEmployee.getEmployeeId());
         return EmployeeMapper.toResponse(savedEmployee);
